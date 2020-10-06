@@ -104,7 +104,29 @@ class RRT(object):
         #     are meaningful! keep this in mind when using the helper functions!
 
         ########## Code starts here ##########
-        
+        for k in range(max_iters):
+            z = np.random.uniform()
+            if z < goal_bias:
+                x_rand = self.x_goal
+            else:
+                x_rand = np.random.uniform(self.statespace_lo, self.statespace_hi, len(self.x_init))
+            x_near_idx = self.find_nearest(V[:n], x_rand)
+            x_near = V[x_near_idx]
+            x_new = self.steer_towards(x_near, x_rand, eps)
+            if self.is_free_motion(self.obstacles, x_near, x_new):
+                V[n] = x_new
+                P[n] = x_near_idx
+                if np.array_equal(x_new, self.x_goal):
+                    self.path = [self.x_goal]
+                    idx = n
+                    while idx != 0:
+                        parent = P[idx]
+                        self.path.append(V[parent])
+                        idx = parent
+                    self.path.reverse()
+                    success = True
+                    break
+                n += 1
         ########## Code ends here ##########
 
         plt.figure()
@@ -142,7 +164,16 @@ class RRT(object):
             None, but should modify self.path
         """
         ########## Code starts here ##########
-        
+        success = False
+        while not success:
+            success = True
+            idx = 1
+            while idx < len(self.path) - 1:
+                if self.is_free_motion(self.obstacles, self.path[idx-1], self.path[idx+1]):
+                    del self.path[idx]
+                    success = False
+                else:
+                    idx += 1
         ########## Code ends here ##########
 
 class GeometricRRT(RRT):
@@ -154,13 +185,17 @@ class GeometricRRT(RRT):
     def find_nearest(self, V, x):
         ########## Code starts here ##########
         # Hint: This should take one line.
-        
+        return np.argmin(np.sum((V - x)**2, axis=1))
         ########## Code ends here ##########
 
     def steer_towards(self, x1, x2, eps):
         ########## Code starts here ##########
         # Hint: This should take one line.
-        
+        dist = np.linalg.norm(x1-x2)
+        if dist <= eps:
+            return x2
+        else:
+            return x1 + (x2-x1) * eps / dist
         ########## Code ends here ##########
 
     def is_free_motion(self, obstacles, x1, x2):
@@ -195,8 +230,8 @@ class DubinsRRT(RRT):
 
     def find_nearest(self, V, x):
         from dubins import path_length
-        ########## Code starts here ##########
-        
+        ########## Code starts here ##########            
+        return np.argmin([path_length(row, x, self.turning_radius) for row in V])   
         ########## Code ends here ##########
 
     def steer_towards(self, x1, x2, eps):
@@ -210,7 +245,15 @@ class DubinsRRT(RRT):
         distance eps (using self.turning_radius) due to numerical precision
         issues.
         """
-        
+        from dubins import path_sample
+        if np.linalg.norm(x1-x2) <= eps:
+            return x2
+        samples = path_sample(x1, x2, 1.001*self.turning_radius, eps)[0]
+        # Samples always include x1
+        if len(samples) > 1:
+            return samples[1]
+        else:
+            return x2
         ########## Code ends here ##########
 
     def is_free_motion(self, obstacles, x1, x2, resolution = np.pi/6):

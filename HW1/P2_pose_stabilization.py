@@ -34,7 +34,24 @@ class PoseController:
         may also be useful, look up its documentation
         """
         ########## Code starts here ##########
+        # When goal is not at the origin, we need to compute new state relative to the new origin
+        th_rel = th - self.th_g
+        # Before rotating axes
+        x_rel_init = x - self.x_g
+        y_rel_init = y - self.y_g
+        # Rotate axes
+        x_rel = x_rel_init * np.cos(self.th_g) + y_rel_init * np.sin(self.th_g)
+        y_rel = -x_rel_init * np.sin(self.th_g) + y_rel_init * np.cos(self.th_g)
         
+        rho = np.sqrt(x_rel**2 + y_rel**2)
+        alpha = wrapToPi(np.arctan2(y_rel, x_rel) - th_rel + np.pi)
+        delta = wrapToPi(alpha + th_rel)
+        if abs(rho) < RHO_THRES and abs(alpha) < ALPHA_THRES and abs(delta) < DELTA_THRES:
+            V = 0
+            om = 0
+        else:
+            V = self.k1 * rho * np.cos(alpha)
+            om = self.k2 * alpha + self.k1 * np.cos(alpha) * np.sinc(alpha / np.pi) * (alpha + self.k3 * delta)
         ########## Code ends here ##########
 
         # apply control limits

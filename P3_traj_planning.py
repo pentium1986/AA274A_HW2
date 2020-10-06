@@ -27,7 +27,10 @@ class SwitchingController(object):
             V, om: Control actions
         """
         ########## Code starts here ##########
-
+        if t < self.traj_controller.traj_times[-1] - self.t_before_switch:
+            return self.traj_controller.compute_control(x,y,th,t)
+        else:
+            return self.pose_controller.compute_control(x,y,th,t)
         ########## Code ends here ##########
 
 def compute_smoothed_traj(path, V_des, alpha, dt):
@@ -48,7 +51,23 @@ def compute_smoothed_traj(path, V_des, alpha, dt):
     Hint: Use splrep and splev from scipy.interpolate
     """
     ########## Code starts here ##########
-    
+    # input is a list of tuples, converts to array
+    path = np.array(path)
+    x_init = path[:,0]
+    y_init = path[:,1]
+    t_delta = np.sqrt(np.diff(x_init)**2 + np.diff(y_init)**2)/V_des
+    t = np.append([0], np.cumsum(t_delta))
+    t_smoothed = np.arange(0, t[-1], dt)
+    tck_x = scipy.interpolate.splrep(t, x_init, s=alpha)
+    x = scipy.interpolate.splev(t_smoothed, tck_x)
+    xd = scipy.interpolate.splev(t_smoothed, tck_x, der=1)
+    xdd = scipy.interpolate.splev(t_smoothed, tck_x, der=2)
+    tck_y = scipy.interpolate.splrep(t, y_init, s=alpha)
+    y = scipy.interpolate.splev(t_smoothed, tck_y)
+    yd = scipy.interpolate.splev(t_smoothed, tck_y, der=1)
+    ydd = scipy.interpolate.splev(t_smoothed, tck_y, der=2)
+    th = np.arctan2(yd, xd)
+    traj_smoothed = np.vstack([x,y,th,xd,yd,xdd,ydd]).transpose()
     ########## Code ends here ##########
 
     return traj_smoothed, t_smoothed
@@ -71,7 +90,13 @@ def modify_traj_with_limits(traj, t, V_max, om_max, dt):
     Hint: This should almost entirely consist of calling functions from Problem Set 1
     """
     ########## Code starts here ##########
-    
+    V,om = compute_controls(traj=traj)
+    s_f = State(x=traj[0,0], y=traj[0,1], V=min(V[-1],V_max), th=traj[0,2])
+    s = compute_arc_length(V, t)
+    V_tilde = rescale_V(V, om, V_max, om_max)
+    tau = compute_tau(V_tilde, s)
+    om_tilde = rescale_om(V, om, V_tilde)
+    t_new, V_scaled, om_scaled, traj_scaled = interpolate_traj(traj, tau, V_tilde, om_tilde, dt, s_f)
     ########## Code ends here ##########
 
     return t_new, V_scaled, om_scaled, traj_scaled

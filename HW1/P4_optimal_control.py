@@ -16,7 +16,16 @@ def ode_fun(tau, z):
         dz: the state derivative vector. Returns a numpy array.
     """
     ########## Code starts here ##########
+    th = z[2]
+    p1 = z[3]
+    p2 = z[4]
+    p3 = z[5]
+    r = z[6]
     
+    V = (p1*np.cos(th) + p2*np.sin(th)) / -2
+    om = p3 / -2
+    
+    dz = np.array([r*V*np.cos(th), r*V*np.sin(th), r*om, 0, 0, r*(p1*V*np.sin(th) - p2*V*np.cos(th)), 0])
     ########## Code ends here ##########
     return dz
 
@@ -40,7 +49,19 @@ def bc_fun(za, zb):
     x0 = [0, 0, -np.pi/2.0]
 
     ########## Code starts here ##########
+    bca = za[:3] - x0
+    bcb_partial = zb[:3] - xf
     
+    th = zb[2]
+    p1 = zb[3]
+    p2 = zb[4]
+    p3 = zb[5]
+    
+    V = (p1*np.cos(th) + p2*np.sin(th)) / -2
+    om = p3 / -2
+    
+    H_f = lam - V**2 - om**2
+    bcb = np.append(bcb_partial, [H_f])
     ########## Code ends here ##########
     return (bca, bcb)
 
@@ -79,7 +100,13 @@ def compute_controls(z):
         om: angular rate control input
     """
     ########## Code starts here ##########
+    th = z[:, 2]
+    p1 = z[:, 3]
+    p2 = z[:, 4]
+    p3 = z[:, 5]
     
+    V = (p1*np.cos(th) + p2*np.sin(th)) / -2
+    om = p3 / -2
     ########## Code ends here ##########
 
     return V, om
@@ -95,7 +122,16 @@ def main():
     Hint: The total time is between 15-25
     """
     ########## Code starts here ##########
+    num_ODE = 7
+    num_parameters = 0
+    num_left_boundary_conditions = 3
+    boundary_points = (0, 1)
+    function = ode_fun
+    boundary_conditions = bc_fun
     
+    global lam
+    lam = 0.25
+    initial_guess = (2.5, 2.5, -np.pi/2, -2, -2, 0.5, 20)
     ########## Code ends here ##########
 
     problem_inputs = {
@@ -128,7 +164,7 @@ if __name__ == '__main__':
     plt.subplot(1, 2, 1)
     plt.plot(x, y,'k-',linewidth=2)
     plt.quiver(x[1:-1:200], y[1:-1:200],np.cos(th[1:-1:200]),np.sin(th[1:-1:200]))
-    plt.grid('on')
+    plt.grid(True)
     plt.plot(0,0,'go',markerfacecolor='green',markersize=15)
     plt.plot(5,5,'ro',markerfacecolor='red', markersize=15)
     plt.xlabel('X [m]')
@@ -139,7 +175,7 @@ if __name__ == '__main__':
     plt.subplot(1, 2, 2)
     plt.plot(t, V,linewidth=2)
     plt.plot(t, om,linewidth=2)
-    plt.grid('on')
+    plt.grid(True)
     plt.xlabel('Time [s]')
     plt.legend(['V [m/s]', '$\omega$ [rad/s]'], loc='best')
     plt.title('Optimal control sequence')

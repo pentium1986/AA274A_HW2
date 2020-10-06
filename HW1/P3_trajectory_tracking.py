@@ -58,8 +58,21 @@ class TrajectoryTracker:
         x_d, xd_d, xdd_d, y_d, yd_d, ydd_d = self.get_desired_state(t)
 
         ########## Code starts here ##########
-        V = 0
-        om = 0
+        # Reset to nominal velocity if V is too small.
+        if self.V_prev >= V_PREV_THRES: 
+            V_p = self.V_prev
+        else:
+            V_p = np.sqrt(xd_d**2 + yd_d**2)
+        
+        xd = V_p * np.cos(th)
+        yd = V_p * np.sin(th)
+        u1 = xdd_d + self.kpx * (x_d - x) + self.kdx * (xd_d - xd)
+        u2 = ydd_d + self.kpy * (y_d - y) + self.kdy * (yd_d - yd)
+        
+        J = np.array([[np.cos(th), -V_p * np.sin(th)], [np.sin(th), V_p * np.cos(th)]])
+        u = np.array([u1, u2])
+        a, om = np.linalg.solve(J, u)
+        V = V_p + a * dt
         ########## Code ends here ##########
 
         # apply control limits
