@@ -91,11 +91,11 @@ def modify_traj_with_limits(traj, t, V_max, om_max, dt):
     """
     ########## Code starts here ##########
     V,om = compute_controls(traj=traj)
-    s_f = State(x=traj[0,0], y=traj[0,1], V=min(V[-1],V_max), th=traj[0,2])
     s = compute_arc_length(V, t)
     V_tilde = rescale_V(V, om, V_max, om_max)
     tau = compute_tau(V_tilde, s)
     om_tilde = rescale_om(V, om, V_tilde)
+    s_f = State(x=traj[0,0], y=traj[0,1], V=min(V_tilde[-1],V_max), th=traj[0,2])
     t_new, V_scaled, om_scaled, traj_scaled = interpolate_traj(traj, tau, V_tilde, om_tilde, dt, s_f)
     ########## Code ends here ##########
 

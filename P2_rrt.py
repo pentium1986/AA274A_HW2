@@ -246,8 +246,6 @@ class DubinsRRT(RRT):
         issues.
         """
         from dubins import path_sample
-        if np.linalg.norm(x1-x2) <= eps:
-            return x2
         samples = path_sample(x1, x2, 1.001*self.turning_radius, eps)[0]
         # Samples always include x1
         if len(samples) > 1:
